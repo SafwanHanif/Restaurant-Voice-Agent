@@ -1,0 +1,26 @@
+# Secrets and API keys
+.env
+*.key
+*.pem
+
+# Database files
+*.db
+
+# Python
+__pycache__/
+*.py[cod]
+
+# IDE
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS
+.DS_Store
+Thumbs.db
