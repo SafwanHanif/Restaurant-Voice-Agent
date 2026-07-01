@@ -58,10 +58,7 @@ class GeminiLiveSession:
         config = {
             "response_modalities": ["AUDIO"],
             "system_instruction": {"parts": [{"text": self.system_prompt}]},
-            "tools": [
-                {"function_declarations": self.tool_declarations},
-                {"code_execution": {}},
-            ],
+            "tools": [{"function_declarations": self.tool_declarations}],
         }
 
         logger.info(f"Starting Gemini Live session (model={LIVE_MODEL})...")

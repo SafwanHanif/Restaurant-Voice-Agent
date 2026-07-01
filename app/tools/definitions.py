@@ -42,7 +42,7 @@ TOOL_DECLARATIONS = [
                 "party_size": {"type": "integer", "description": "Number of guests"},
                 "date": {"type": "string", "description": "Reservation date in YYYY-MM-DD format"},
                 "time": {"type": "string", "description": "Reservation time in HH:MM format (24h)"},
-                "special_requests": {"type": "string", "description": "Any special requests (allergies, celebrations, seating preferences)", "optional": True},
+                "special_requests": {"type": "string", "description": "Any special requests (allergies, celebrations, seating preferences)"},
             },
             "required": ["customer_name", "phone", "party_size", "date", "time"],
         },
@@ -55,7 +55,7 @@ TOOL_DECLARATIONS = [
             "properties": {
                 "customer_name": {"type": "string", "description": "Name on the reservation"},
                 "phone": {"type": "string", "description": "Phone number used for the reservation"},
-                "date": {"type": "string", "description": "Reservation date in YYYY-MM-DD (optional)", "optional": True},
+                "date": {"type": "string", "description": "Reservation date in YYYY-MM-DD (optional)"},
             },
             "required": ["customer_name", "phone"],
         },
@@ -101,10 +101,10 @@ TOOL_DECLARATIONS = [
         "parameters": {
             "type": "object",
             "properties": {
-                "allergen": {"type": "string", "description": "Allergen to exclude (e.g., 'peanuts', 'dairy', 'gluten')", "optional": True},
-                "vegetarian": {"type": "boolean", "description": "Filter for vegetarian items", "optional": True},
-                "vegan": {"type": "boolean", "description": "Filter for vegan items", "optional": True},
-                "gluten_free": {"type": "boolean", "description": "Filter for gluten-free items", "optional": True},
+                "allergen": {"type": "string", "description": "Allergen to exclude (e.g., 'peanuts', 'dairy', 'gluten')"},
+                "vegetarian": {"type": "boolean", "description": "Filter for vegetarian items"},
+                "vegan": {"type": "boolean", "description": "Filter for vegan items"},
+                "gluten_free": {"type": "boolean", "description": "Filter for gluten-free items"},
             },
             "required": [],
         },

@@ -51,6 +51,12 @@ async def handle_browser_session(websocket: WebSocket):
         # Load the system prompt with today's date
         system_prompt = await load_system_prompt()
 
+        # Signal connection ready FIRST (before setting up Gemini)
+        await websocket.send_json({
+            "type": "connected",
+            "message": "Connected to Bella Italia voice assistant. Start speaking!",
+        })
+
         # ── Create Gemini Live session ───────────────────────
         async def on_tool_call(tool_name: str, args: dict):
             """Handle a tool call by dispatching to restaurant services."""
@@ -63,18 +69,26 @@ async def handle_browser_session(websocket: WebSocket):
             on_tool_call=on_tool_call,
         )
 
-        await gemini_session.start()
-        logger.info("Gemini Live session active for browser client")
-
-        # Signal connection ready
-        await websocket.send_json({
-            "type": "connected",
-            "message": "Connected to Bella Italia voice assistant. Start speaking!",
-        })
+        try:
+            await gemini_session.start()
+            logger.info("Gemini Live session active for browser client")
+            await websocket.send_json({
+                "type": "status",
+                "text": "Voice assistant ready!",
+            })
+        except Exception as gemini_err:
+            logger.error(f"Gemini session failed: {gemini_err}")
+            await websocket.send_json({
+                "type": "error",
+                "text": f"Could not connect to voice service: {gemini_err}",
+            })
+            gemini_session = None  # Don't try to use it
 
         # ── Forward Gemini audio → browser ───────────────────
         async def relay_gemini_to_browser():
             """Forward Gemini's audio and text responses to the browser."""
+            if not gemini_session:
+                return
             try:
                 async for event in gemini_session.audio_output_stream():
                     if event["type"] == "audio":
@@ -90,7 +104,9 @@ async def handle_browser_session(websocket: WebSocket):
                 if "close" not in str(e).lower():
                     logger.error(f"Gemini→Browser relay error: {e}")
 
-        relay_task = asyncio.create_task(relay_gemini_to_browser())
+        relay_task = None
+        if gemini_session:
+            relay_task = asyncio.create_task(relay_gemini_to_browser())
 
         # ── Main loop: receive audio from browser, forward to Gemini ──
         # Also handle JSON messages for any client-side requests
@@ -108,7 +124,7 @@ async def handle_browser_session(websocket: WebSocket):
             if "bytes" in raw:
                 # Raw PCM16 audio from browser
                 audio_bytes = raw["bytes"]
-                if audio_bytes:
+                if audio_bytes and gemini_session:
                     buffer_size += len(audio_bytes)
                     await gemini_session.push_audio(audio_bytes)
 

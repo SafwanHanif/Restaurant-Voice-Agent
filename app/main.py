@@ -16,7 +16,7 @@ Endpoints:
 from contextlib import asynccontextmanager
 from datetime import date, time
 
-from fastapi import Depends, FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from loguru import logger
@@ -76,7 +76,7 @@ async def health():
 
 
 @app.websocket("/voice/browser")
-async def browser_voice(websocket):
+async def browser_voice(websocket: WebSocket):
     """
     WebSocket endpoint for browser-based voice.
 
