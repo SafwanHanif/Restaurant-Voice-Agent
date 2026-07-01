@@ -136,8 +136,12 @@ class GeminiLiveSession:
                 if chunk is None:
                     break
                 try:
-                    # Use the non-deprecated API for real-time audio
-                    await self.session.send_realtime_input(input=chunk)
+                    # SDK v2.10+: audio is wrapped in a Blob with correct mime type
+                    audio_blob = genai_types.Blob(
+                        data=chunk,
+                        mime_type="audio/pcm;rate=16000",
+                    )
+                    await self.session.send_realtime_input(audio=audio_blob)
                 except Exception as e:
                     logger.error(f"Error sending audio to Gemini: {e}")
                     break
@@ -153,12 +157,22 @@ class GeminiLiveSession:
                 if not self._running:
                     break
 
-                # --- Audio data from Gemini ---
-                if response.data:
-                    await self._output_queue.put({
-                        "type": "audio",
-                        "data": response.data,
-                    })
+                # --- Audio data from Gemini (inside server_content.model_turn parts) ---
+                if response.server_content and response.server_content.model_turn:
+                    for part in response.server_content.model_turn.parts:
+                        # Audio comes as inline_data (Blob)
+                        if part.inline_data and part.inline_data.data:
+                            await self._output_queue.put({
+                                "type": "audio",
+                                "data": part.inline_data.data,
+                            })
+                        # Text responses
+                        if part.text:
+                            logger.debug(f"Gemini: {part.text}")
+                            await self._output_queue.put({
+                                "type": "text",
+                                "text": part.text,
+                            })
 
                 # --- Tool call from Gemini ---
                 if response.tool_call:
@@ -173,7 +187,7 @@ class GeminiLiveSession:
                         else:
                             result = {"error": "No tool handler configured"}
 
-                        # Send result back via send_tool_response (non-deprecated)
+                        # Send result back via send_tool_response
                         try:
                             await self.session.send_tool_response(
                                 function_responses=[genai_types.FunctionResponse(
@@ -185,15 +199,9 @@ class GeminiLiveSession:
                         except Exception as e:
                             logger.error(f"Error sending tool response: {e}")
 
-                # --- Server content (text/thought) ---
-                if response.server_content and response.server_content.model_turn:
-                    for part in response.server_content.model_turn.parts:
-                        if part.text:
-                            logger.debug(f"Gemini: {part.text}")
-                            await self._output_queue.put({
-                                "type": "text",
-                                "text": part.text,
-                            })
+                # --- Setup complete ---
+                if response.setup_complete:
+                    logger.info(f"Session setup complete: {response.setup_complete.session_id}")
 
         except asyncio.CancelledError:
             pass
