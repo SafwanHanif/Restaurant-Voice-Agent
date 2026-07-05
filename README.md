@@ -2,7 +2,7 @@
 title: Restaurant Voice Agent
 emoji: 🎙️
 colorFrom: green
-colorTo: dark
+colorTo: gray
 sdk: docker
 app_port: 7860
 short_description: Voice-powered restaurant ordering with Gemini Live API
