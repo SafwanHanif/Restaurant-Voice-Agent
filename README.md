@@ -1,174 +1,95 @@
 # Restaurant Voice Agent
 
-A browser-based voice agent for restaurants using Gemini Live API.
+A browser-based voice agent for restaurants powered by **Gemini Live API**. Customers can talk naturally to place orders, make reservations, and ask menu questions — all through a retro-terminal web interface.
+
+## Features
+
+- **🎙️ Voice Conversations** — Real-time audio streaming via WebSocket + Gemini Live API
+- **📋 Menu Q&A** — Answers questions about menu items, prices, and ingredients
+- **🍽️ Order Taking** — Takes food orders conversationally, reads them back for confirmation
+- **📅 Reservations** — Checks table availability and books reservations
+- **🖥️ Online Ordering** — Click-to-order page for customers who prefer typing
+- **📊 Analytics Dashboard** — Daily trends, top items, peak hours, revenue KPIs
+- **👨‍🍳 Admin Order Management** — Kitchen lane view with status controls
+- **🔍 Order Lookup** — Search orders by phone number or order ID
 
 ## Quick Start
 
-This project implements a real-time voice assistant for restaurants that can:
-- Answer menu questions
-- Check table availability
-- Take reservations  
-- Provide restaurant information
+### Prerequisites
+- Python 3.14+ (3.12+ should also work)
+- A Gemini API key from [aistudio.google.com](https://aistudio.google.com/apikey)
 
-### Running the Server
+### Setup
 
 ```bash
-# Start the FastAPI server
-python -m app.main
+# Clone (or copy) and enter the project directory
+cd restaurant-voice-agent
 
-# Test with curl
-curl http://localhost:8000/health
+# Create a virtual environment
+python -m venv venv
+venv\Scripts\activate   # Windows
+# source venv/bin/activate  # Linux/Mac
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure your environment
+cp .env.example .env
+# Edit .env — set your GEMINI_API_KEY and restaurant info
 ```
 
-### Browser Access
-
-Open your browser to:
-```
-http://localhost:8000/voice-widget
-```
-
-This will load the voice interface with the microphone button.
-
-### Testing
+### Run
 
 ```bash
-# Run integration tests
-python test_basic.py
-
-# Or run the full test suite
-python final_integration_test.py
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
+
+Open **http://localhost:8000** in a browser (Chrome/Firefox recommended). Click **PICK UP** to start a voice conversation.
+
+### Pages
+
+| Page | URL | Description |
+|------|-----|-------------|
+| Voice Terminal | `/` | Main voice interface |
+| Admin Dashboard | `/admin` | Kitchen order lanes |
+| Order Lookup | `/order-lookup` | Search orders |
+| Analytics | `/analytics` | Business metrics |
+| Online Ordering | `/order` | Customer order form |
 
 ## Architecture
 
-### Backend: Python FastAPI
-- **WebSocket**: `/voice/browser` for real-time audio streaming
-- **REST API**: `/api/reservations/*`, `/api/menu/*` for operations
-- **Database**: PostgreSQL via SQLAlchemy ORM
-- **Voice AI**: Gemini Live API integration
-
-### Frontend: Browser JavaScript
-- **Audio Processing**: PCM16 16kHz capture and playback
-- **WebSocket**: Real-time bidirectional messaging
-- **UI**: Voice widget with microphone interface
-- **Speech I/O**: Automatic speech recognition and synthesis
-
-## Key Features
-
-1. **Voice Commands**: Natural language reservation and menu queries
-2. **Real-time Audio**: Bidirectional audio streaming (16kHz PCM16)
-3. **Tool Integration**: Seamless database and API calls
-4. **Error Handling**: Robust error recovery and user feedback
-5. **Session Management**: Per-call voice interaction tracking
-
-## Files Updated
-
-### Protocol Fix
-- **`app/voice/browser_bridge.py`**: Fixed WebSocket protocol to send `{"type": "connected", "message": "..."}` immediately after connection
-- **`app/main.py`**: WebSocket endpoint `/voice/browser` maintained
-
-### Other Improvements
-- **`.gitignore`**: Enhanced to exclude sensitive files
-- **`README.md`**: Added comprehensive documentation
-
-## WebSocket Protocol
-
-### Client-Side Flow
-1. Browser connects to `ws://localhost:8000/voice/browser`
-2. Browser expects server to send `{"type": "connected", "message": "..."}`
-3. Server sends confirmation immediately after accepting connection
-4. Browser then sends audio bytes and receives responses
-
-### Server-Side Flow
-1. Server accepts WebSocket connection
-2. **IMMEDIATELY** sends `{"type": "connected", "message": "Connected to Bella Italia voice assistant. Start speaking!"`
-3. Server processes audio from browser and forwards to Gemini Live API
-4. Server receives Gemini responses and forwards to browser
-5. Loop continues until disconnect
-
-## Technical Details
-
-### Audio Specifications
-- **Format**: PCM16 (16-bit signed integers)
-- **Sample Rate**: 16,000 Hz
-- **Channels**: Mono (single channel)
-- **Codec**: Raw audio streaming
-
-### API Endpoints
 ```
-GET /health                    # Health check
-GET /voice-widget              # Voice widget HTML
-POST /test/reservation          # Test reservation (no audio)
+backend/
+├── main.py            # FastAPI app, WebSocket endpoint, static serving
+├── gemini_session.py  # Gemini Live API session wrapper
+├── web_routes.py      # REST API endpoints & page routes
+├── twilio_routes.py   # Twilio phone integration (optional)
+├── db.py              # SQLAlchemy models (Menu, Order, Reservation, etc.)
+├── tools.py           # Tool declarations & executor for Gemini
+├── config.py          # Environment config
+├── audio_utils.py     # Audio format conversion helpers
+├── seed_data.py       # Seed menu items & tables
+
+frontend/
+├── index.html         # Main voice terminal
+├── admin.html         # Kitchen order dashboard
+├── order-lookup.html  # Order search
+├── analytics.html     # Analytics dashboard
+└── order.html         # Online ordering page
 ```
 
-### Backend APIs
-```
-POST /api/reservations/check-availability
-POST /api/reservations
-GET /api/menu
-GET /api/menu/{item_name}
-```
+### Audio Specs
 
-## Development
+- **Capture**: 48 kHz → downsampled to 16 kHz PCM16 mono
+- **Playback**: 24 kHz PCM16 mono (Gemini output format)
+- **Transport**: WebSocket binary frames
 
-### Dependencies
-```bash
-pip install -r requirements.txt
-```
+### Tech Stack
 
-### Database Setup
-```bash
-# Initialize database
-python -m app.seed
-```
-
-### Testing
-```bash
-# Core functionality test
-python test_basic.py
-
-# Full integration test
-python final_integration_test.py
-
-# Protocol analysis
-python integration_runner.py
-```
-
-## Future Enhancements
-
-### Phase 2
-- Square POS integration
-- Payment processing
-- Advanced NLP for better intent recognition
-- Multi-language support
-
-### Phase 3
-- Staff dashboard
-- Call analytics
-- Mobile app support
-- Advanced restaurant management
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Implement changes
-4. Test thoroughly
-5. Submit a pull request
+- **Backend**: Python FastAPI + SQLAlchemy + SQLite
+- **Voice AI**: Gemini 2.5 Flash (Live Audio API)
+- **Frontend**: Vanilla JavaScript + Web Audio API + CSS retro terminal theme
 
 ## License
 
-MIT License
-
-## Contact
-
-For issues or contributions:
-- GitHub Issues
-- [openhands](mailto:openhands@all-hands.dev)
-
----
-
-**Project Type**: Voice AI Assistant
-**Technology Stack**: FastAPI, Gemini Live, PostgreSQL, WebSocket, Audio Processing
-**Target Platform**: Web browsers with microphone access
-**Core Functionality**: Voice-based restaurant reservations and menu queries
+MIT

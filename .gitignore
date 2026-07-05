@@ -1,26 +1,28 @@
-# Secrets and API keys
-.env
-*.key
-*.pem
-
-# Database files
-*.db
-
 # Python
 __pycache__/
 *.py[cod]
+*.egg-info/
+venv/
+.venv/
+env/
+
+# Environment
+.env
 
 # IDE
 .vscode/
 .idea/
-
-# Logs
-*.log
-
-# Temporary files
-*.tmp
-*.temp
+*.swp
 
 # OS
 .DS_Store
 Thumbs.db
+
+# SQLite
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+
+# Claude
+.claude/

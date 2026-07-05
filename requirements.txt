@@ -1,11 +1,8 @@
-# Restaurant Voice Agent - Python Dependencies
 fastapi>=0.110.0
 uvicorn[standard]>=0.27.0
-sqlalchemy[asyncio]>=2.0.25
-aiosqlite>=0.20.0
+sqlalchemy>=2.0.25
 pydantic>=2.5.0
-pydantic-settings>=2.1.0
 google-genai>=2.10.0
 websockets<15
 python-multipart>=0.0.6
-loguru>=0.7.2
+scipy>=1.14.0
