@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,6 +14,10 @@ import twilio_routes
 import web_routes
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(levelname)s %(message)s")
+
+# Resolve paths relative to this file so the app works regardless of cwd
+HERE = os.path.dirname(os.path.abspath(__file__))
+FRONTEND = os.path.join(HERE, "..", "frontend")
 
 app = FastAPI(title=f"{RESTAURANT_NAME} Voice Agent")
 
@@ -39,10 +44,10 @@ def health():
 
 @app.get("/")
 def index():
-    return FileResponse("../frontend/index.html")
+    return FileResponse(os.path.join(FRONTEND, "index.html"))
 
 
-app.mount("/static", StaticFiles(directory="../frontend"), name="static")
+app.mount("/static", StaticFiles(directory=FRONTEND), name="static")
 
 
 if __name__ == "__main__":

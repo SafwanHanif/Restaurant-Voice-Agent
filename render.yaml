@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: restaurant-voice-agent
+    runtime: python
+    repo: https://github.com/SafwanHanif/Restaurant-Voice-Agent
+    branch: master
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GEMINI_API_KEY
+        sync: false  # set this in the Render dashboard
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash-native-audio-latest
+      - key: GEMINI_VOICE
+        value: Puck
+      - key: RESTAURANT_NAME
+        value: Debs
+      - key: RESTAURANT_HOURS
+        value: 12 PM - 3 AM
+      - key: RESTAURANT_ADDRESS
+        value: Going Hells 1234
+      - key: RESTAURANT_PHONE
+        value: "1234"
+      - key: DATABASE_URL
+        value: sqlite:///./restaurant.db
+      - key: HOST
+        value: 0.0.0.0
+      # PORT is set automatically by Render — we use $PORT in the startCommand
+    healthCheckPath: /health
+    autoDeploy: true

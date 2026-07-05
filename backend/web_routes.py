@@ -12,6 +12,7 @@ import asyncio
 import datetime as dt
 import json
 import logging
+import os
 import uuid
 from collections import Counter
 
@@ -20,6 +21,10 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
 from db import MenuItem, Order, OrderItem, OrderStatus, get_db
+
+# Resolve frontend path relative to this file so it works regardless of cwd
+HERE = os.path.dirname(os.path.abspath(__file__))
+FRONTEND = os.path.join(HERE, "..", "frontend")
 from gemini_session import GeminiVoiceSession
 
 logger = logging.getLogger("voice_agent")
@@ -62,25 +67,25 @@ def get_menu():
 @router.get("/admin")
 def admin_dashboard():
     """Kitchen dashboard — live orders in lane view."""
-    return FileResponse("../frontend/admin.html")
+    return FileResponse(os.path.join(FRONTEND, "admin.html"))
 
 
 @router.get("/order-lookup")
 def order_lookup_page():
     """Customer order lookup page."""
-    return FileResponse("../frontend/order-lookup.html")
+    return FileResponse(os.path.join(FRONTEND, "order-lookup.html"))
 
 
 @router.get("/analytics")
 def analytics_page():
     """Analytics dashboard."""
-    return FileResponse("../frontend/analytics.html")
+    return FileResponse(os.path.join(FRONTEND, "analytics.html"))
 
 
 @router.get("/order")
 def order_page():
     """Online ordering page."""
-    return FileResponse("../frontend/order.html")
+    return FileResponse(os.path.join(FRONTEND, "order.html"))
 
 
 # ---------------------------------------------------------------------------
