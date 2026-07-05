@@ -56,6 +56,32 @@ Open **http://localhost:8000** in a browser (Chrome/Firefox recommended). Click 
 | Analytics | `/analytics` | Business metrics |
 | Online Ordering | `/order` | Customer order form |
 
+## Deployment
+
+### Deploy on Railway (easiest)
+
+1. Push this repo to GitHub
+2. Go to [railway.app](https://railway.app) → **New Project** → **Deploy from GitHub repo**
+3. Connect your repo
+4. Add environment variables (see below)
+5. Railway auto-detects [railway.json](./railway.json) — no manual config needed
+
+### Deploy on Render
+
+1. Push this repo to GitHub
+2. Go to [render.com](https://render.com) → **New Web Service** → connect your repo
+3. It uses [render.yaml](./render.yaml) if you choose Blueprint, or set manually:
+   - **Build**: `pip install -r requirements.txt`
+   - **Start**: `uvicorn backend.main:app --host 0.0.0.0 --port $PORT`
+
+### Required environment variables
+
+| Variable | What to put |
+|----------|-------------|
+| `GEMINI_API_KEY` | Your Gemini API key from [aistudio.google.com](https://aistudio.google.com/apikey) |
+
+Optional: `GEMINI_MODEL`, `GEMINI_VOICE`, `RESTAURANT_NAME`, `RESTAURANT_HOURS`, etc. See [.env.example](./.env.example).
+
 ## Architecture
 
 ```
