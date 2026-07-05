@@ -134,11 +134,18 @@ class GeminiVoiceSession:
         In google-genai >=2.0, session.receive() yields messages for one
         turn and then exits when turn_complete is signaled. We wrap it in
         an outer loop so the conversation continues across multiple turns.
+
+        Audio chunks from Gemini can arrive as tiny fragments. To avoid
+        choppy/staccato playback we buffer them to ~200 ms before sending
+        to the output callback, flushing on turn boundaries and barge-in.
         """
+        # 24 kHz PCM16 → 48 000 bytes/sec → 200 ms ≈ 9600 bytes
+        AUDIO_BUFFER_TARGET = 9600
         turn_count = 0
         while not self._closed:
             turn_count += 1
             logger.info("[%s] receiver: starting turn %d", self.session_id, turn_count)
+            audio_buf = bytearray()
             try:
                 async for response in self._session.receive():
                     if self._closed:
@@ -149,7 +156,12 @@ class GeminiVoiceSession:
                         # Barge-in: caller interrupted the model
                         if server_content.interrupted:
                             logger.info("[%s] barge-in detected", self.session_id)
+                            # Flush any audio already buffered, then reset
+                            if audio_buf:
+                                await on_audio_out(bytes(audio_buf))
+                                audio_buf.clear()
                             await on_event({"type": "interrupted"})
+
                         # Caller transcription
                         if server_content.input_transcription and server_content.input_transcription.text:
                             text = server_content.input_transcription.text
@@ -161,9 +173,18 @@ class GeminiVoiceSession:
                             self.transcript_lines.append(f"Agent: {text}")
                             await on_event({"type": "transcript", "speaker": "agent", "text": text})
 
-                    # Audio data (works as a property in google-genai >=2.0)
+                        # Turn complete: flush remaining audio and end this turn
+                        if server_content.turn_complete:
+                            if audio_buf:
+                                await on_audio_out(bytes(audio_buf))
+                                audio_buf.clear()
+
+                    # Audio data — buffer and flush when we have enough
                     if response.data:
-                        await on_audio_out(response.data)
+                        audio_buf.extend(response.data)
+                        if len(audio_buf) >= AUDIO_BUFFER_TARGET:
+                            await on_audio_out(bytes(audio_buf))
+                            audio_buf.clear()
 
                     # Tool call
                     if response.tool_call:
