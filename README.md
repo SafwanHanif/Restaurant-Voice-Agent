@@ -1,3 +1,13 @@
+---
+title: Restaurant Voice Agent
+emoji: 🎙️
+colorFrom: green
+colorTo: dark
+sdk: docker
+app_port: 7860
+short_description: Voice-powered restaurant ordering with Gemini Live API
+---
+
 # Restaurant Voice Agent
 
 A browser-based voice agent for restaurants powered by **Gemini Live API**. Customers can talk naturally to place orders, make reservations, and ask menu questions — all through a retro-terminal web interface.
@@ -57,6 +67,16 @@ Open **http://localhost:8000** in a browser (Chrome/Firefox recommended). Click 
 | Online Ordering | `/order` | Customer order form |
 
 ## Deployment
+
+### Deploy on Hugging Face Spaces
+
+1. Go to [huggingface.co/spaces](https://huggingface.co/spaces) → **Create new Space**
+2. Set **Space name** (e.g. `debs-voice-agent`), **License** MIT
+3. **Space SDK**: pick **Docker**
+4. **Docker template**: **Custom Dockerfile** (not Gradio/Streamlit)
+5. Connect your GitHub repo or push directly via git
+6. Go to **Settings** → **Repository Secrets** → add `GEMINI_API_KEY`
+7. The Space builds and deploys automatically — your app runs on port 7860
 
 ### Deploy on Railway (easiest)
 
