@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Voice Host Terminal</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e0a;
+    --panel:#0e140f;
+    --panel-raised:#131b13;
+    --line:#1f2e20;
+    --green:#4cff8a;
+    --green-dim:#2b8a52;
+    --pink:#ff4ecb;
+    --pink-dim:#a13585;
+    --amber:#ffb347;
+    --paper:#eef0e6;
+    --paper-ink:#14210f;
+    --muted:#475a47;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(ellipse at 50% -10%, #14231a 0%, var(--bg) 55%);
+    color:var(--green);
+    font-family:'JetBrains Mono', monospace;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:28px;
+    min-height:100vh;
+  }
+  .pixel{ font-family:'Press Start 2P', monospace; }
+
+  .terminal{
+    width:100%;
+    max-width:560px;
+    background:var(--panel);
+    border:2px solid var(--line);
+    border-radius:14px;
+    box-shadow:
+      0 0 0 1px #000,
+      0 20px 60px -20px rgba(0,0,0,0.8),
+      inset 0 0 40px rgba(76,255,138,0.03);
+    overflow:hidden;
+    position:relative;
+  }
+
+  /* CRT scanline overlay */
+  .terminal::before{
+    content:"";
+    position:absolute; inset:0;
+    background:repeating-linear-gradient(
+      to bottom,
+      rgba(0,0,0,0) 0px,
+      rgba(0,0,0,0) 2px,
+      rgba(0,0,0,0.18) 3px
+    );
+    pointer-events:none;
+    mix-blend-mode:multiply;
+    opacity:0.5;
+    z-index:5;
+  }
+
+  header{
+    padding:18px 20px 14px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .brand{ display:flex; flex-direction:column; gap:6px; }
+  .brand .name{ font-size:12px; letter-spacing:0.5px; color:var(--green); }
+  .brand .tag{ font-size:9px; color:var(--green-dim); letter-spacing:1px; }
+  .led-row{ display:flex; align-items:center; gap:8px; font-size:10px; color:var(--green-dim); }
+  .led{
+    width:9px; height:9px; border-radius:50%;
+    background:var(--green-dim);
+    box-shadow:0 0 6px var(--green-dim);
+    transition:background .2s, box-shadow .2s;
+  }
+  .led.live{ background:var(--pink); box-shadow:0 0 10px var(--pink), 0 0 20px var(--pink); animation:pulse 1.4s ease-in-out infinite; }
+  .led.connecting{ background:var(--amber); box-shadow:0 0 8px var(--amber); animation:pulse 0.8s ease-in-out infinite; }
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+  @media (prefers-reduced-motion: reduce){ .led{ animation:none !important; } }
+
+  /* Nav strip */
+  .nav-strip{
+    display:flex;
+    justify-content:flex-end;
+    gap:14px;
+    padding:6px 20px;
+    border-bottom:1px solid var(--line);
+    font-size:9px;
+  }
+  .nav-strip a{
+    color:var(--green-dim);
+    text-decoration:none;
+    letter-spacing:0.5px;
+    transition:color .15s;
+  }
+  .nav-strip a:hover{ color:var(--green); }
+  .nav-strip a .arrow{ color:var(--muted); margin-right:3px; }
+
+  .stage{
+    padding:22px 20px 10px;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:14px;
+  }
+
+  .dial-btn{
+    width:120px; height:120px;
+    border-radius:50%;
+    border:2px solid var(--pink-dim);
+    background:radial-gradient(circle at 35% 30%, #241426, #0c0810);
+    color:var(--pink);
+    font-family:'Press Start 2P', monospace;
+    font-size:10px;
+    cursor:pointer;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
+    line-height:1.6;
+    letter-spacing:0.5px;
+    transition:box-shadow .2s, transform .1s, border-color .2s;
+    box-shadow:0 0 0 rgba(255,78,203,0);
+  }
+  .dial-btn:hover{ transform:translateY(-1px); }
+  .dial-btn:active{ transform:translateY(0px) scale(0.98); }
+  .dial-btn.active{
+    border-color:var(--pink);
+    box-shadow:0 0 18px rgba(255,78,203,0.55), 0 0 40px rgba(255,78,203,0.18);
+  }
+
+  .status-line{ font-size:11px; color:var(--green-dim); min-height:14px; text-align:center; }
+
+  .channel-row{ display:flex; gap:8px; font-size:10px; flex-wrap:wrap; justify-content:center; }
+  .chip{
+    border:1px solid var(--line); border-radius:20px;
+    padding:5px 10px; color:var(--green-dim); cursor:default;
+    transition:background .15s, border-color .15s, color .15s;
+  }
+  .chip.on{ color:var(--bg); background:var(--green); border-color:var(--green); }
+  .chip.clickable{cursor:pointer;}
+  .chip.clickable:hover{ border-color:var(--green-dim); color:var(--green); }
+  .chip.clickable.open{ color:var(--bg); background:var(--pink); border-color:var(--pink); }
+
+  .transcript{
+    margin:14px 20px 0;
+    height:170px;
+    overflow-y:auto;
+    background:#070a07;
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:10px 12px;
+    font-size:12px;
+    line-height:1.65;
+    scrollbar-width:thin;
+    scrollbar-color:var(--line) transparent;
+  }
+  .transcript .placeholder{ color:#2a3a2b; }
+  .line{ margin-bottom:4px; white-space:pre-wrap; word-break:break-word; }
+  .line .who{ opacity:0.65; margin-right:6px; }
+  .line.caller{ color:var(--green); }
+  .line.agent{ color:var(--pink); }
+
+  .receipts{
+    padding:14px 20px 20px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .receipt{
+    background:var(--paper);
+    color:var(--paper-ink);
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    line-height:1.55;
+    border-radius:2px;
+    padding:12px 14px;
+    box-shadow:0 6px 14px rgba(0,0,0,0.35);
+    transform-origin:top center;
+    animation:print 0.35s ease-out;
+    position:relative;
+  }
+  .receipt::before{
+    content:"";
+    position:absolute; left:0; right:0; top:-6px; height:6px;
+    background:repeating-linear-gradient(90deg, var(--paper) 0 6px, transparent 6px 10px);
+  }
+  .receipt .title{ font-weight:700; letter-spacing:0.5px; margin-bottom:6px; border-bottom:1px dashed #999; padding-bottom:6px; }
+  @keyframes print{ from{ transform:scaleY(0.2); opacity:0; } to{ transform:scaleY(1); opacity:1; } }
+  @media (prefers-reduced-motion: reduce){ .receipt{ animation:none; } }
+
+  footer{
+    padding:10px 20px 16px;
+    font-size:9px;
+    color:#2a3a2b;
+    text-align:center;
+  }
+
+  /* ---- Menu sidebar overlay ---- */
+  .menu-overlay{
+    position:fixed; inset:0;
+    background:rgba(0,0,0,0.6);
+    z-index:100;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .25s;
+  }
+  .menu-overlay.open{ opacity:1; pointer-events:auto; }
+
+  .menu-sidebar{
+    position:fixed; top:0; right:0; bottom:0;
+    width:420px;
+    max-width:100vw;
+    background:var(--panel);
+    border-left:2px solid var(--line);
+    z-index:110;
+    display:flex;
+    flex-direction:column;
+    transform:translateX(105%);
+    transition:transform .3s cubic-bezier(0.22, 1, 0.36, 1);
+    box-shadow:-10px 0 40px rgba(0,0,0,0.6);
+  }
+  .menu-sidebar.open{ transform:translateX(0); }
+
+  .menu-sidebar .menu-header{
+    padding:18px 20px 14px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+  }
+  .menu-sidebar .menu-header .title{ font-size:11px; letter-spacing:1px; }
+  .menu-sidebar .menu-header .badge{ font-size:9px; color:var(--green-dim); }
+  .menu-sidebar .close-btn{
+    background:none; border:none; color:var(--pink-dim);
+    font-family:'Press Start 2P', monospace;
+    font-size:10px; cursor:pointer; padding:4px 8px;
+    transition:color .15s;
+  }
+  .menu-sidebar .close-btn:hover{ color:var(--pink); }
+
+  .menu-scroll{
+    overflow-y:auto;
+    padding:10px 20px 20px;
+    scrollbar-width:thin;
+    scrollbar-color:var(--line) transparent;
+    flex:1;
+  }
+
+  .menu-section{ margin-top:18px; }
+  .menu-section:first-child{ margin-top:8px; }
+  .menu-section .cat-label{
+    font-size:10px;
+    letter-spacing:2px;
+    color:var(--pink-dim);
+    border-bottom:1px solid var(--line);
+    padding-bottom:6px;
+    margin-bottom:8px;
+  }
+
+  .menu-item{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    padding:6px 0;
+    border-bottom:1px dotted rgba(31,46,32,0.5);
+    gap:12px;
+  }
+  .menu-item:last-child{ border-bottom:none; }
+  .menu-item .left{ flex:1; min-width:0; }
+  .menu-item .name{
+    font-size:12px;
+    color:var(--green);
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
+  }
+  .menu-item .desc{
+    font-size:10px;
+    color:var(--muted);
+    margin-top:2px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .menu-item .tags{ display:flex; gap:4px; margin-top:3px; flex-wrap:wrap; }
+  .menu-item .tag{
+    font-size:8px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:1px 6px;
+    color:var(--green-dim);
+    letter-spacing:0.3px;
+  }
+  .menu-item .tag.veg{ border-color:#2b8a52; color:#4cff8a; }
+  .menu-item .tag.vegan{ border-color:#2b8a52; }
+  .menu-item .price{
+    font-size:13px;
+    color:var(--green);
+    white-space:nowrap;
+    font-weight:500;
+  }
+
+  .menu-loading{
+    text-align:center;
+    padding:40px 0;
+    font-size:10px;
+    color:var(--green-dim);
+    letter-spacing:1px;
+  }
+  .menu-error{
+    text-align:center;
+    padding:40px 0;
+    font-size:10px;
+    color:var(--pink-dim);
+  }
+
+  @media (max-width:500px){
+    .menu-sidebar{ width:100vw; }
+  }
+</style>
+</head>
+<body>
+
+<div class="terminal">
+  <header>
+    <div class="brand">
+      <div class="name pixel" id="restaurantName">RESTAURANT</div>
+      <div class="tag">VOICE HOST TERMINAL</div>
+    </div>
+    <div class="led-row">
+      <span id="led" class="led"></span>
+      <span id="statusLabel">OFFLINE</span>
+    </div>
+  </header>
+
+  <div class="nav-strip">
+    <a href="/admin" target="_blank" title="Kitchen dashboard"><span class="arrow">▸</span>ADMIN</a>
+    <a href="/order-lookup" target="_blank" title="Check your order status"><span class="arrow">▸</span>ORDER STATUS</a>
+    <a href="/analytics" target="_blank" title="Analytics dashboard"><span class="arrow">▸</span>ANALYTICS</a>
+    <a href="/order" target="_blank" title="Order online"><span class="arrow">▸</span>ORDER ONLINE</a>
+  </div>
+
+  <div class="stage">
+    <button id="dialBtn" class="dial-btn">PICK UP</button>
+    <div class="status-line" id="statusLine">tap to talk to the host</div>
+    <div class="channel-row">
+      <span class="chip on">WEB MIC</span>
+      <span class="chip clickable" id="menuChip">MENU</span>
+    </div>
+  </div>
+
+  <div class="transcript" id="transcript">
+    <div class="placeholder">// transcript will appear here once the call connects</div>
+  </div>
+
+  <div class="receipts" id="receipts"></div>
+
+  <footer>GEMINI LIVE &middot; FASTAPI &middot; WEBSOCKET AUDIO</footer>
+</div>
+
+<!-- Menu overlay + sidebar -->
+<div class="menu-overlay" id="menuOverlay"></div>
+<div class="menu-sidebar" id="menuSidebar">
+  <div class="menu-header">
+    <span class="title pixel">MENU</span>
+    <span class="badge" id="menuCount"></span>
+    <button class="close-btn" id="menuClose">X</button>
+  </div>
+  <div class="menu-scroll" id="menuScroll">
+    <div class="menu-loading">LOADING...</div>
+  </div>
+</div>
+
+<script>
+// ---- DOM refs ----
+const dialBtn = document.getElementById('dialBtn');
+const led = document.getElementById('led');
+const statusLabel = document.getElementById('statusLabel');
+const statusLine = document.getElementById('statusLine');
+const transcriptEl = document.getElementById('transcript');
+const receiptsEl = document.getElementById('receipts');
+const restaurantNameEl = document.getElementById('restaurantName');
+const menuChip = document.getElementById('menuChip');
+const menuSidebar = document.getElementById('menuSidebar');
+const menuOverlay = document.getElementById('menuOverlay');
+const menuClose = document.getElementById('menuClose');
+const menuScroll = document.getElementById('menuScroll');
+const menuCount = document.getElementById('menuCount');
+
+// ---- Fetch restaurant name ----
+fetch('/health').then(r => r.json()).then(d => {
+  if (d.restaurant) restaurantNameEl.textContent = d.restaurant.toUpperCase();
+}).catch(() => {});
+
+// ---- Menu sidebar ----
+let menuOpen = false;
+
+function openMenu(){
+  menuOpen = true;
+  menuSidebar.classList.add('open');
+  menuOverlay.classList.add('open');
+  menuChip.classList.add('open');
+}
+function closeMenu(){
+  menuOpen = false;
+  menuSidebar.classList.remove('open');
+  menuOverlay.classList.remove('open');
+  menuChip.classList.remove('open');
+}
+
+menuChip.addEventListener('click', () => menuOpen ? closeMenu() : openMenu());
+menuOverlay.addEventListener('click', closeMenu);
+menuClose.addEventListener('click', closeMenu);
+
+// Close with Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && menuOpen) closeMenu();
+});
+
+// ---- Fetch & render menu ----
+(function loadMenu(){
+  fetch('/api/menu')
+    .then(r => r.json())
+    .then(data => {
+      const cats = data.categories;
+      const total = Object.values(cats).flat().length;
+      menuCount.textContent = total + ' items';
+
+      let html = '';
+      for (const [cat, items] of Object.entries(cats)){
+        html += `<div class="menu-section"><div class="cat-label">// ${cat.toUpperCase()}</div>`;
+        for (const item of items){
+          const tags = [];
+          if (item.vegetarian) tags.push('<span class="tag veg">VEG</span>');
+          if (item.vegan) tags.push('<span class="tag vegan">VEGAN</span>');
+          if (item.allergens) tags.push('<span class="tag">⚠ ' + item.allergens.replace(/,/g, ', ') + '</span>');
+
+          html += `<div class="menu-item">
+            <div class="left">
+              <div class="name">${item.name} ${tags.join('')}</div>
+              <div class="desc">${item.description || ''}</div>
+            </div>
+            <div class="price">$${item.price.toFixed(2)}</div>
+          </div>`;
+        }
+        html += '</div>';
+      }
+      menuScroll.innerHTML = html;
+    })
+    .catch(() => {
+      menuScroll.innerHTML = '<div class="menu-error">⚠ FAILED TO LOAD MENU</div>';
+    });
+})();
+
+// ---- Call state ----
+let ws = null;
+let micStream = null;
+let micContext = null;
+let micProcessor = null;
+let playbackContext = null;
+let playbackTime = 0;
+let isCalling = false;
+
+function setStatus(state, label){
+  led.className = 'led' + (state ? ' ' + state : '');
+  statusLabel.textContent = label;
+}
+
+function addTranscriptLine(speaker, text){
+  const placeholder = transcriptEl.querySelector('.placeholder');
+  if (placeholder) placeholder.remove();
+  const div = document.createElement('div');
+  div.className = 'line ' + speaker;
+  const who = document.createElement('span');
+  who.className = 'who';
+  who.textContent = speaker === 'caller' ? 'YOU>' : 'HOST>';
+  div.appendChild(who);
+  div.appendChild(document.createTextNode(text));
+  transcriptEl.appendChild(div);
+  transcriptEl.scrollTop = transcriptEl.scrollHeight;
+}
+
+function addReceipt(title, lines){
+  const card = document.createElement('div');
+  card.className = 'receipt';
+  const t = document.createElement('div');
+  t.className = 'title';
+  t.textContent = title;
+  card.appendChild(t);
+  lines.forEach(l => {
+    const p = document.createElement('div');
+    p.textContent = l;
+    card.appendChild(p);
+  });
+  receiptsEl.prepend(card);
+}
+
+function handleToolEvent(evt){
+  const { name, result } = evt;
+  if (name === 'create_reservation' && result.success){
+    addReceipt('RESERVATION CONFIRMED', [
+      result.confirmation_summary || '',
+      'Ref: ' + result.reservation_id
+    ]);
+  } else if (name === 'place_order' && result.success){
+    addReceipt('ORDER PLACED', [
+      'Order #' + result.order_id,
+      'Total: $' + result.total_price.toFixed(2),
+      'Ready in ~' + result.estimated_ready_minutes + ' min'
+    ]);
+  } else if (name === 'transfer_to_human' && result.success){
+    addReceipt('TRANSFERRING TO STAFF', [evt.args && evt.args.reason ? evt.args.reason : 'Connecting you now...']);
+  }
+}
+
+// ---- audio capture: mic -> 16kHz PCM16 -> websocket ----
+
+async function startMic(){
+  micStream = await navigator.mediaDevices.getUserMedia({ audio: { channelCount: 1, echoCancellation: true, noiseSuppression: true } });
+  micContext = new (window.AudioContext || window.webkitAudioContext)();
+  const source = micContext.createMediaStreamSource(micStream);
+  const bufferSize = 2048;
+  micProcessor = micContext.createScriptProcessor(bufferSize, 1, 1);
+  const inRate = micContext.sampleRate;
+  const outRate = 16000;
+
+  micProcessor.onaudioprocess = (e) => {
+    if (!ws || ws.readyState !== WebSocket.OPEN) return;
+    const input = e.inputBuffer.getChannelData(0);
+    const resampled = downsample(input, inRate, outRate);
+    ws.send(pcmFloatToInt16(resampled).buffer);
+  };
+  source.connect(micProcessor);
+  micProcessor.connect(micContext.destination);
+}
+
+function downsample(float32, inRate, outRate){
+  if (inRate === outRate) return float32;
+  const ratio = inRate / outRate;
+  const newLen = Math.round(float32.length / ratio);
+  const result = new Float32Array(newLen);
+  for (let i = 0; i < newLen; i++){
+    result[i] = float32[Math.floor(i * ratio)];
+  }
+  return result;
+}
+
+function pcmFloatToInt16(float32){
+  const out = new Int16Array(float32.length);
+  for (let i = 0; i < float32.length; i++){
+    const s = Math.max(-1, Math.min(1, float32[i]));
+    out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+  }
+  return out;
+}
+
+function stopMic(){
+  if (micProcessor){ micProcessor.disconnect(); micProcessor = null; }
+  if (micContext){ micContext.close(); micContext = null; }
+  if (micStream){ micStream.getTracks().forEach(t => t.stop()); micStream = null; }
+}
+
+// ---- audio playback: websocket -> PCM16 24kHz -> speakers ----
+
+function ensurePlaybackContext(){
+  if (!playbackContext){
+    playbackContext = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 24000 });
+    playbackTime = playbackContext.currentTime;
+  }
+}
+
+function playPcm24k(arrayBuffer){
+  ensurePlaybackContext();
+  const int16 = new Int16Array(arrayBuffer);
+  const float32 = new Float32Array(int16.length);
+  for (let i = 0; i < int16.length; i++) float32[i] = int16[i] / 0x8000;
+
+  const buffer = playbackContext.createBuffer(1, float32.length, 24000);
+  buffer.copyToChannel(float32, 0);
+
+  const src = playbackContext.createBufferSource();
+  src.buffer = buffer;
+  src.connect(playbackContext.destination);
+
+  // Sequential scheduling: play each chunk right after the previous one
+  // This prevents overlapping audio while keeping latency bounded naturally
+  const now = playbackContext.currentTime;
+  if (playbackTime < now) playbackTime = now;
+  src.start(playbackTime);
+  playbackTime += buffer.duration;
+}
+
+function clearPlaybackQueue(){
+  if (playbackContext) playbackTime = playbackContext.currentTime;
+}
+
+// ---- call lifecycle ----
+
+async function startCall(){
+  setStatus('connecting', 'CONNECTING');
+  statusLine.textContent = 'dialing the host...';
+
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  ws = new WebSocket(`${proto}://${location.host}/ws/web-call`);
+  ws.binaryType = 'arraybuffer';
+
+  ws.onopen = async () => {
+    try {
+      await startMic();
+      setStatus('live', 'LIVE');
+      statusLine.textContent = 'connected — say hello';
+      dialBtn.textContent = 'HANG UP';
+      dialBtn.classList.add('active');
+      isCalling = true;
+    } catch (err){
+      statusLine.textContent = 'microphone access denied';
+      setStatus('', 'OFFLINE');
+      ws.close();
+    }
+  };
+
+  ws.onmessage = (event) => {
+    if (typeof event.data === 'string'){
+      const evt = JSON.parse(event.data);
+      if (evt.type === 'transcript'){
+        addTranscriptLine(evt.speaker, evt.text);
+      } else if (evt.type === 'tool_call'){
+        handleToolEvent(evt);
+      } else if (evt.type === 'interrupted'){
+        clearPlaybackQueue();
+      }
+    } else {
+      playPcm24k(event.data);
+    }
+  };
+
+  ws.onclose = () => endCall();
+  ws.onerror = () => endCall();
+}
+
+function endCall(){
+  stopMic();
+  if (ws){ ws.onclose = null; ws.close(); ws = null; }
+  isCalling = false;
+  setStatus('', 'OFFLINE');
+  statusLine.textContent = 'tap to talk to the host';
+  dialBtn.textContent = 'PICK UP';
+  dialBtn.classList.remove('active');
+}
+
+dialBtn.addEventListener('click', () => {
+  if (isCalling) endCall();
+  else startCall();
+});
+</script>
+
+</body>
+</html>

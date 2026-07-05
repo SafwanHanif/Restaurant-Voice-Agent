@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Analytics — Debs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e0a;
+    --panel:#0e140f;
+    --line:#1f2e20;
+    --green:#4cff8a;
+    --green-dim:#2b8a52;
+    --pink:#ff4ecb;
+    --pink-dim:#a13585;
+    --amber:#ffb347;
+    --blue:#5bc0ff;
+    --muted:#475a47;
+    --purple:#b07eff;
+    font-size:15px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;padding:0;}
+  body{
+    background:radial-gradient(ellipse at 50% -8%, #14231a 0%, var(--bg) 50%);
+    color:var(--green);
+    font-family:'JetBrains Mono', monospace;
+    min-height:100vh;
+  }
+  .pixel{font-family:'Press Start 2P',monospace}
+
+  .page{max-width:900px;margin:0 auto;padding:20px 24px 40px;}
+
+  /* Header */
+  .top-bar{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding-bottom:16px;border-bottom:1px solid var(--line);margin-bottom:22px;
+    flex-wrap:wrap;
+  }
+  .top-bar .brand{font-size:14px;font-weight:700;letter-spacing:1px;}
+  .top-bar .brand span{font-size:9px;color:var(--green-dim);font-weight:400;margin-left:8px;letter-spacing:2px;}
+  .top-bar .live{display:flex;align-items:center;gap:6px;font-size:10px;color:var(--green-dim);}
+  .top-bar .live .dot{
+    width:8px;height:8px;border-radius:50%;
+    background:var(--green);box-shadow:0 0 8px var(--green);
+    animation:pulse 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* KPI cards */
+  .kpi-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-bottom:22px;}
+  .kpi{
+    background:var(--panel);border:1px solid var(--line);border-radius:8px;
+    padding:14px 16px;text-align:center;
+  }
+  .kpi .num{font-size:22px;font-weight:700;color:var(--green);}
+  .kpi .lbl{font-size:9px;color:var(--muted);letter-spacing:1px;margin-top:4px;text-transform:uppercase;}
+  .kpi.revenue .num{color:var(--amber);}
+  .kpi.revenue .num::before{content:"$";font-size:14px;opacity:.6;margin-right:2px;}
+
+  /* Section */
+  .section{margin-bottom:22px;}
+  .section-title{font-size:10px;color:var(--pink-dim);letter-spacing:2px;margin-bottom:10px;padding-bottom:5px;border-bottom:1px solid var(--line);}
+
+  /* Two-col grid */
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:640px){.two-col{grid-template-columns:1fr;}}
+
+  /* Card */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:16px;}
+
+  /* Daily bar chart */
+  .daily-chart{display:flex;align-items:flex-end;gap:6px;height:120px;padding:6px 0;}
+  .daily-chart .col{flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;}
+  .daily-chart .bar{
+    width:100%;max-width:40px;border-radius:3px 3px 0 0;
+    background:var(--green-dim);min-height:4px;
+    transition:background .2s;
+  }
+  .daily-chart .col:hover .bar{background:var(--green);}
+  .daily-chart .lbl{font-size:8px;color:var(--muted);margin-top:4px;letter-spacing:0.5px;}
+  .daily-chart .val{font-size:9px;color:var(--green-dim);margin-bottom:2px;}
+
+  /* Items list */
+  .item-row{display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px dotted rgba(31,46,32,0.4);font-size:11px;}
+  .item-row:last-child{border:none;}
+  .item-row .rank{color:var(--muted);min-width:20px;}
+  .item-row .name{flex:1;}
+  .item-row .count{color:var(--green-dim);}
+
+  /* Peak hours horizontal bar */
+  .hour-row{display:flex;align-items:center;gap:6px;font-size:10px;margin-bottom:3px;}
+  .hour-row .hlbl{min-width:28px;color:var(--muted);text-align:right;}
+  .hour-row .hbar{
+    height:14px;border-radius:2px;
+    background:var(--blue);opacity:.7;
+    min-width:4px;
+    transition:opacity .2s;
+  }
+  .hour-row:hover .hbar{opacity:1;}
+
+  /* Status breakdown */
+  .status-row{display:flex;align-items:center;gap:8px;font-size:11px;margin-bottom:6px;}
+  .status-row .sbar{height:16px;border-radius:2px;min-width:4px;transition:opacity .2s;}
+  .status-row:hover .sbar{opacity:.85;}
+  .status-row .slbl{min-width:80px;color:var(--muted);}
+  .status-row .scount{color:var(--green-dim);min-width:30px;text-align:right;}
+  .status-row .spct{color:var(--muted);min-width:36px;}
+
+  .loading{text-align:center;padding:60px 0;font-size:10px;color:var(--green-dim);letter-spacing:1px;}
+</style>
+</head>
+<body>
+
+<div class="page">
+  <div class="top-bar">
+    <div class="brand">DEBS <span>ANALYTICS</span></div>
+    <div class="live"><span class="dot"></span><span>LIVE</span></div>
+  </div>
+
+  <div id="content">
+    <div class="loading">LOADING DATA...</div>
+  </div>
+</div>
+
+<script>
+async function load(){
+  try {
+    const res = await fetch('/api/admin/analytics');
+    const d = await res.json();
+
+    const totalO = d.total_orders || 0;
+
+    document.getElementById('content').innerHTML = `
+      <!-- KPI row -->
+      <div class="kpi-row">
+        <div class="kpi"><div class="num">${d.today_orders}</div><div class="lbl">ORDERS TODAY</div></div>
+        <div class="kpi revenue"><div class="num">${fmt(d.today_revenue)}</div><div class="lbl">REVENUE TODAY</div></div>
+        <div class="kpi revenue"><div class="num">${fmt(d.week_revenue)}</div><div class="lbl">THIS WEEK</div></div>
+        <div class="kpi revenue"><div class="num">${fmt(d.total_revenue)}</div><div class="lbl">TOTAL REVENUE</div></div>
+      </div>
+
+      <!-- Daily orders -->
+      <div class="section">
+        <div class="section-title">// DAILY ORDERS (LAST 7 DAYS)</div>
+        <div class="card">
+          <div class="daily-chart">${barChart(d.daily_orders)}</div>
+        </div>
+      </div>
+
+      <!-- Two column: Top items + Peak hours -->
+      <div class="two-col">
+        <div class="section">
+          <div class="section-title">// TOP ITEMS</div>
+          <div class="card">${topItems(d.top_items)}</div>
+        </div>
+        <div class="section">
+          <div class="section-title">// PEAK HOURS</div>
+          <div class="card">${peakHours(d.peak_hours)}</div>
+        </div>
+      </div>
+
+      <!-- Status breakdown -->
+      <div class="section">
+        <div class="section-title">// STATUS BREAKDOWN</div>
+        <div class="card">${statusBreak(d.status_breakdown, totalO)}</div>
+      </div>
+    `;
+  } catch(e){
+    document.getElementById('content').innerHTML = `<div style="text-align:center;padding:60px 0;font-size:10px;color:var(--pink-dim);">⚠ FAILED TO LOAD ANALYTICS</div>`;
+  }
+}
+
+function fmt(v){return Number(v).toLocaleString('en',{minimumFractionDigits:2,maximumFractionDigits:2})}
+
+function barChart(daily){
+  if(!daily || !daily.length) return '<div style="font-size:10px;color:var(--muted);">no data</div>';
+  const max = Math.max(...daily.map(d => d.orders), 1);
+  return daily.map(d =>
+    `<div class="col">
+      <div class="val">${d.orders}</div>
+      <div class="bar" style="height:${Math.round((d.orders/max)*100)}%"></div>
+      <div class="lbl">${esc(d.date)}</div>
+    </div>`
+  ).join('');
+}
+
+function topItems(items){
+  if(!items || !items.length) return '<div style="font-size:10px;color:var(--muted);">no orders yet</div>';
+  return items.map((item,i) =>
+    `<div class="item-row">
+      <span class="rank">${i+1}.</span>
+      <span class="name">${esc(item.name)}</span>
+      <span class="count">${item.count}×</span>
+    </div>`
+  ).join('');
+}
+
+function peakHours(hours){
+  if(!hours || !hours.length) return '<div style="font-size:10px;color:var(--muted);">no data</div>';
+  const max = Math.max(...hours.map(h => h.orders), 1);
+  return hours.map(h => {
+    const ampm = h.hour < 12 ? 'am' : 'pm';
+    const h12 = h.hour === 0 ? 12 : h.hour > 12 ? h.hour - 12 : h.hour;
+    const pct = Math.round((h.orders / max) * 100);
+    return `<div class="hour-row">
+      <span class="hlbl">${h12}${ampm}</span>
+      <div class="hbar" style="width:${pct}%"></div>
+      <span style="color:var(--muted);font-size:9px;">${h.orders}</span>
+    </div>`;
+  }).join('');
+}
+
+function statusBreak(breakdown, total){
+  if(!breakdown || total === 0) return '<div style="font-size:10px;color:var(--muted);">no orders yet</div>';
+  const colors = {placed:'var(--amber)',preparing:'var(--blue)',ready:'var(--green)',completed:'var(--muted)',cancelled:'var(--pink-dim)'};
+  return Object.entries(breakdown).map(([status,count]) => {
+    const pct = Math.round((count/total)*100);
+    return `<div class="status-row">
+      <div class="sbar" style="width:${pct*2}px;background:${colors[status]||'var(--line)'}"></div>
+      <span class="slbl">${status.toUpperCase()}</span>
+      <span class="scount">${count}</span>
+      <span class="spct">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+function esc(s){const d=document.createElement('div');d.textContent=s;return d.innerHTML;}
+
+load();
+</script>
+</body>
+</html>

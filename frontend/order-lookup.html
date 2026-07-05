@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Order Status — Debs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0e0a;
+    --panel:#0e140f;
+    --panel-raised:#131b13;
+    --line:#1f2e20;
+    --green:#4cff8a;
+    --green-dim:#2b8a52;
+    --pink:#ff4ecb;
+    --pink-dim:#a13585;
+    --amber:#ffb347;
+    --blue:#5bc0ff;
+    --muted:#475a47;
+    font-size:16px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:radial-gradient(ellipse at 50% -10%, #14231a 0%, var(--bg) 50%);
+    color:var(--green);
+    font-family:'JetBrains Mono', monospace;
+    display:flex;
+    align-items:flex-start;
+    justify-content:center;
+    min-height:100vh;
+    padding:32px 20px;
+  }
+  .pixel{ font-family:'Press Start 2P', monospace; }
+
+  .page{
+    width:100%;
+    max-width:500px;
+  }
+
+  /* Back link */
+  .back-link{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    font-size:9px;
+    color:var(--muted);
+    text-decoration:none;
+    margin-bottom:10px;
+    transition:color .15s;
+  }
+  .back-link:hover{ color:var(--green-dim); }
+
+  .card{
+    background:var(--panel);
+    border:2px solid var(--line);
+    border-radius:14px;
+    overflow:hidden;
+  }
+  .card-header{
+    padding:18px 22px 14px;
+    border-bottom:1px solid var(--line);
+  }
+  .card-header .brand{ font-size:12px; letter-spacing:0.5px; color:var(--green); }
+  .card-header .tag{ font-size:9px; color:var(--green-dim); letter-spacing:1px; margin-top:4px; }
+
+  .card-body{ padding:22px; }
+
+  /* Search */
+  .search-group{ display:flex; gap:8px; }
+  .search-group input{
+    flex:1;
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:10px 12px;
+    font-family:'JetBrains Mono', monospace;
+    font-size:13px;
+    color:var(--green);
+    outline:none;
+    transition:border-color .2s, box-shadow .2s;
+  }
+  .search-group input:focus{
+    border-color:var(--green-dim);
+    box-shadow:0 0 10px rgba(76,255,138,0.06);
+  }
+  .search-group input::placeholder{ color:var(--muted); font-size:11px; }
+  .search-group button{
+    background:var(--line);
+    border:none;
+    border-radius:6px;
+    padding:8px 16px;
+    font-family:'Press Start 2P', monospace;
+    font-size:9px;
+    color:var(--bg);
+    cursor:pointer;
+    transition:background .2s;
+    white-space:nowrap;
+  }
+  .search-group button:hover{ background:var(--green); }
+
+  .toggle-mode{
+    margin-top:10px;
+    font-size:9px;
+    color:var(--muted);
+    cursor:pointer;
+    text-align:right;
+    transition:color .15s;
+  }
+  .toggle-mode:hover{ color:var(--green-dim); }
+
+  /* Status messages */
+  .status-msg{
+    margin-top:18px;
+    text-align:center;
+    font-size:10px;
+    letter-spacing:0.5px;
+  }
+  .status-msg.loading{ color:var(--green-dim); animation:pulse 1.2s ease-in-out infinite; }
+  .status-msg.error{ color:var(--pink-dim); }
+  .status-msg.empty{ color:var(--muted); }
+
+  @keyframes pulse{ 0%,100%{opacity:1;} 50%{opacity:.35;} }
+
+  /* Order result cards */
+  .order-result{ margin-top:18px; display:flex; flex-direction:column; gap:12px; }
+
+  .r-card{
+    background:var(--bg);
+    border:1px solid var(--line);
+    border-radius:8px;
+    padding:14px 16px;
+    animation:fadeIn .3s ease-out;
+  }
+  @keyframes fadeIn{ from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+  @media (prefers-reduced-motion: reduce){ .r-card{ animation:none; } }
+
+  .r-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:12px;
+    margin-bottom:10px;
+  }
+  .r-top .r-id{ font-size:11px; font-weight:500; color:var(--green-dim); }
+  .r-top .r-name{ font-size:13px; color:var(--green); margin-top:2px; }
+  .r-top .r-type{ font-size:8px; letter-spacing:0.5px; margin-top:4px; color:var(--muted); }
+
+  .status-badge{
+    display:inline-block;
+    font-size:8px;
+    font-weight:700;
+    letter-spacing:1px;
+    padding:3px 8px;
+    border-radius:12px;
+    text-transform:uppercase;
+    border:1px solid;
+    flex-shrink:0;
+  }
+  .status-badge.placed{ color:var(--amber); border-color:var(--amber); background:rgba(255,179,71,0.08); }
+  .status-badge.preparing{ color:var(--blue); border-color:var(--blue); background:rgba(91,192,255,0.08); }
+  .status-badge.ready{ color:var(--green); border-color:var(--green); background:rgba(76,255,138,0.08); }
+  .status-badge.completed{ color:var(--muted); border-color:var(--line); }
+  .status-badge.cancelled{ color:var(--pink-dim); border-color:var(--pink-dim); }
+
+  .r-items{ font-size:11px; line-height:1.75; color:var(--green-dim); }
+  .r-items .ri{ display:flex; justify-content:space-between; padding:2px 0; }
+  .r-items .ri .ri-qty{ color:var(--muted); min-width:24px; }
+
+  .r-footer{
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px solid var(--line);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    font-size:9px;
+  }
+  .r-footer .r-total{ font-size:13px; font-weight:500; color:var(--green); }
+  .r-footer .r-time{ color:var(--muted); }
+
+  .footer{
+    padding:14px 22px 18px;
+    font-size:9px;
+    color:var(--muted);
+    text-align:center;
+    border-top:1px solid var(--line);
+  }
+  .footer a{
+    color:var(--green-dim);
+    text-decoration:none;
+    transition:color .15s;
+  }
+  .footer a:hover{ color:var(--green); }
+</style>
+</head>
+<body>
+
+<div class="page">
+  <a class="back-link" href="/" target="_blank">← BACK TO TERMINAL</a>
+
+  <div class="card">
+    <div class="card-header">
+      <div class="brand pixel">DEBS</div>
+      <div class="tag">ORDER STATUS LOOKUP</div>
+    </div>
+
+    <div class="card-body">
+      <div class="search-group">
+        <input type="text" id="searchInput" placeholder="phone number" autocomplete="off" />
+        <button id="searchBtn">CHECK</button>
+      </div>
+      <div class="toggle-mode" id="toggleMode">search by order ID instead</div>
+
+      <div class="status-msg" id="statusMsg"></div>
+      <div class="order-result" id="orderResult"></div>
+    </div>
+
+    <div class="footer">
+      <a href="/" target="_blank">debs voice order system</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const searchInput = document.getElementById('searchInput');
+const searchBtn = document.getElementById('searchBtn');
+const toggleMode = document.getElementById('toggleMode');
+const statusMsg = document.getElementById('statusMsg');
+const orderResult = document.getElementById('orderResult');
+
+let mode = 'phone'; // 'phone' | 'id'
+let lastSearch = '';
+
+toggleMode.addEventListener('click', () => {
+  mode = mode === 'phone' ? 'id' : 'phone';
+  searchInput.placeholder = mode === 'phone' ? 'phone number' : 'order ID';
+  toggleMode.textContent = mode === 'phone' ? 'search by order ID instead' : 'search by phone number instead';
+  searchInput.value = '';
+  statusMsg.textContent = '';
+  statusMsg.className = 'status-msg';
+  orderResult.innerHTML = '';
+  lastSearch = '';
+});
+
+async function search(){
+  const q = searchInput.value.trim();
+  if (!q) return;
+  if (q === lastSearch) return;
+  lastSearch = q;
+
+  statusMsg.textContent = 'SEARCHING...';
+  statusMsg.className = 'status-msg loading';
+  orderResult.innerHTML = '';
+
+  const param = mode === 'phone' ? `phone=${encodeURIComponent(q)}` : `order_id=${encodeURIComponent(q)}`;
+  try {
+    const res = await fetch(`/api/orders/lookup?${param}`);
+    const data = await res.json();
+    const orders = data.orders || [];
+
+    if (!orders.length){
+      statusMsg.textContent = '◆ no orders found';
+      statusMsg.className = 'status-msg empty';
+      return;
+    }
+
+    statusMsg.textContent = '';
+    statusMsg.className = 'status-msg';
+    orderResult.innerHTML = orders.map(o => receiptHtml(o)).join('');
+  } catch(e){
+    statusMsg.textContent = '⚠ failed to look up order';
+    statusMsg.className = 'status-msg error';
+  }
+}
+
+searchBtn.addEventListener('click', search);
+searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') search(); });
+
+function receiptHtml(o){
+  const status = o.status || 'placed';
+  const itemsHtml = o.items.map(i =>
+    `<div class="ri"><span><span class="ri-qty">${i.quantity}×</span>${esc(i.name)}</span><span>$${(i.unit_price * i.quantity).toFixed(2)}</span></div>`
+  ).join('');
+  const typeLabel = o.order_type === 'delivery' ? 'DELIVERY' : 'PICKUP';
+  const time = o.created_at ? new Date(o.created_at).toLocaleString() : '';
+
+  return `<div class="r-card">
+    <div class="r-top">
+      <div>
+        <div class="r-id">#${esc(o.short_id)}</div>
+        <div class="r-name">${esc(o.customer_name)}</div>
+        <div class="r-type">${typeLabel}</div>
+      </div>
+      <span class="status-badge ${status}">${status}</span>
+    </div>
+    <div class="r-items">${itemsHtml}</div>
+    <div class="r-footer">
+      <span class="r-total">$${Number(o.total_price).toFixed(2)}</span>
+      <span class="r-time">${time}</span>
+    </div>
+  </div>`;
+}
+
+function esc(s){ const d=document.createElement('div'); d.textContent=s; return d.innerHTML; }
+</script>
+</body>
+</html>
